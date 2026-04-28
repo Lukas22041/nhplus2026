@@ -7,6 +7,8 @@ build/
 !**/src/test/**/build/
 test-results/
 
+/db/nursingHome.db
+
 ### Maven Wrapper ###
 !.mvn/wrapper/maven-wrapper.jar
 
