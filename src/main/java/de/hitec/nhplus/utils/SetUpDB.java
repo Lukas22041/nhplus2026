@@ -93,6 +93,9 @@ public class SetUpDB {
             dao.create(new Patient("Ahmet", "Yilmaz", convertStringToLocalDate("1941-02-22"), "3", "013", "normal"));
             dao.create(new Patient("Hans", "Neumann", convertStringToLocalDate("1955-12-12"), "2", "001", "sehr vermögend"));
             dao.create(new Patient("Elisabeth", "Müller", convertStringToLocalDate("1958-03-07"), "5", "110", "arm"));
+
+            dao.create(new Patient("Henrik", "B", convertStringToLocalDate("2006-06-12"), "1", "112", "arm"));
+
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
