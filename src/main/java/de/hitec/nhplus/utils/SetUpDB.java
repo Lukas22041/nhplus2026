@@ -4,8 +4,10 @@ import de.hitec.nhplus.datastorage.ConnectionBuilder;
 import de.hitec.nhplus.datastorage.DaoFactory;
 import de.hitec.nhplus.datastorage.PatientDao;
 import de.hitec.nhplus.datastorage.TreatmentDao;
+import de.hitec.nhplus.datastorage.UserDao;
 import de.hitec.nhplus.model.Patient;
 import de.hitec.nhplus.model.Treatment;
+import de.hitec.nhplus.model.User;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -23,7 +25,6 @@ import static de.hitec.nhplus.utils.DateConverter.convertStringToLocalTime;
  * database with some test data.
  */
 public class SetUpDB {
-
     /**
      * Ensures that all required tables exist and inserts patient and treatment demo data if the
      * domain tables are still empty. User accounts are intentionally not seeded, so no login
@@ -34,6 +35,7 @@ public class SetUpDB {
         SetUpDB.setUpTablePatient(connection);
         SetUpDB.setUpTableTreatment(connection);
         SetUpDB.setUpTableUser(connection);
+        SetUpDB.defaultSetUp();
         SetUpDB.ensurePatientsExist();
         SetUpDB.ensureTreatmentsExist();
     }
@@ -48,6 +50,7 @@ public class SetUpDB {
         SetUpDB.setUpTablePatient(connection);
         SetUpDB.setUpTableTreatment(connection);
         SetUpDB.setUpTableUser(connection);
+        SetUpDB.defaultSetUp();
         SetUpDB.setUpPatients();
         SetUpDB.setUpTreatments();
     }
@@ -176,5 +179,30 @@ public class SetUpDB {
 
     public static void main(String[] args) {
         SetUpDB.setUpDb();
+    }
+
+    public static User defaultSetUp() {
+        final String username = "admin";
+        final String plainPassword = "admin123";
+
+        try {
+            UserDao userDao = DaoFactory.getDaoFactory().createUserDao();
+            User existingUser = userDao.readByUsername(username);
+            String salt = PasswordUtil.generateSalt();
+            String passwordHash = PasswordUtil.hash(plainPassword, salt);
+
+            if (existingUser == null) {
+                User adminUser = new User(username, passwordHash, salt);
+                userDao.create(adminUser);
+                return userDao.readByUsername(username);
+            }
+
+            existingUser.setPasswordHash(passwordHash);
+            existingUser.setSalt(salt);
+            userDao.update(existingUser);
+            return existingUser;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("User konnte nicht angelegt werden", exception);
+        }
     }
 }
