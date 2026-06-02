@@ -8,6 +8,8 @@ import de.hitec.nhplus.model.Patient;
 import de.hitec.nhplus.model.Treatment;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -23,14 +25,29 @@ import static de.hitec.nhplus.utils.DateConverter.convertStringToLocalTime;
 public class SetUpDB {
 
     /**
+     * Ensures that all required tables exist and inserts patient and treatment demo data if the
+     * domain tables are still empty. User accounts are intentionally not seeded, so no login
+     * credentials have to exist in source code.
+     */
+    public static void initializeDatabase() {
+        Connection connection = ConnectionBuilder.getConnection();
+        SetUpDB.setUpTablePatient(connection);
+        SetUpDB.setUpTableTreatment(connection);
+        SetUpDB.setUpTableUser(connection);
+        SetUpDB.ensurePatientsExist();
+        SetUpDB.ensureTreatmentsExist();
+    }
+
+    /**
      * This method wipes the database by dropping the tables. Then the method calls DDL statements to build it up from
-     * scratch and DML statements to fill the database with hard coded test data.
+     * scratch and DML statements to fill it with patient and treatment test data.
      */
     public static void setUpDb() {
         Connection connection = ConnectionBuilder.getConnection();
         SetUpDB.wipeDb(connection);
         SetUpDB.setUpTablePatient(connection);
         SetUpDB.setUpTableTreatment(connection);
+        SetUpDB.setUpTableUser(connection);
         SetUpDB.setUpPatients();
         SetUpDB.setUpTreatments();
     }
@@ -42,6 +59,7 @@ public class SetUpDB {
         try (Statement statement = connection.createStatement()) {
             statement.execute("DROP TABLE IF EXISTS treatment");
             statement.execute("DROP TABLE IF EXISTS patient");
+            statement.execute("DROP TABLE IF EXISTS \"user\"");
         } catch (SQLException exception) {
             System.out.println(exception.getMessage());
         }
@@ -83,6 +101,20 @@ public class SetUpDB {
         }
     }
 
+    private static void setUpTableUser(Connection connection) {
+        final String SQL = "CREATE TABLE IF NOT EXISTS \"user\" (" +
+                "   id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "   username TEXT NOT NULL UNIQUE, " +
+                "   password_hash TEXT NOT NULL, " +
+                "   salt TEXT NOT NULL" +
+                ");";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(SQL);
+        } catch (SQLException exception) {
+            System.out.println(exception.getMessage());
+        }
+    }
+
 
     private static void setUpPatients() {
         try {
@@ -101,6 +133,12 @@ public class SetUpDB {
         }
     }
 
+    private static void ensurePatientsExist() {
+        if (!tableHasEntries("patient")) {
+            setUpPatients();
+        }
+    }
+
     private static void setUpTreatments() {
         try {
             TreatmentDao dao = DaoFactory.getDaoFactory().createTreatmentDao();
@@ -116,6 +154,23 @@ public class SetUpDB {
             dao.create(new Treatment(17, 6, convertStringToLocalDate("2023-09-01"), convertStringToLocalTime("16:00"), convertStringToLocalTime("17:00"), "KG", "Massage der Extremitäten zur Verbesserung der Durchblutung"));
         } catch (SQLException exception) {
             exception.printStackTrace();
+        }
+    }
+
+    private static void ensureTreatmentsExist() {
+        if (!tableHasEntries("treatment")) {
+            setUpTreatments();
+        }
+    }
+
+    private static boolean tableHasEntries(String tableName) {
+        final String sql = "SELECT COUNT(*) FROM " + tableName;
+        try (PreparedStatement statement = ConnectionBuilder.getConnection().prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            return resultSet.next() && resultSet.getInt(1) > 0;
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+            return false;
         }
     }
 
