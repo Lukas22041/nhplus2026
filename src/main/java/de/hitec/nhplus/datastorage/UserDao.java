@@ -119,6 +119,19 @@ public class UserDao extends DaoImp<User> {
         return null;
     }
 
+    public User readActiveByUsername(String username) throws SQLException {
+        try (PreparedStatement preparedStatement = this.connection.prepareStatement(
+                getSelectBaseSql() + " WHERE u.username = ? AND u.is_active = 1")) {
+            preparedStatement.setString(1, username);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return getInstanceFromResultSet(resultSet);
+                }
+            }
+        }
+        return null;
+    }
+
     private String getSelectBaseSql() {
         return "SELECT u.uid, u.username, u.password_hash, u.salt, " +
                 "r.rid AS role_rid, r.role_name, r.can_view, r.can_create, r.can_edit, r.can_delete, r.can_manage_users " +

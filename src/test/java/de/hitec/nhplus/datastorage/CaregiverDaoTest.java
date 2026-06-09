@@ -1,14 +1,15 @@
 package de.hitec.nhplus.datastorage;
 
 import de.hitec.nhplus.model.Caregiver;
-import de.hitec.nhplus.model.Patient;
+import de.hitec.nhplus.model.Role;
+import de.hitec.nhplus.model.User;
+import de.hitec.nhplus.utils.AppSession;
 import org.junit.jupiter.api.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +35,21 @@ class CaregiverDaoTest {
                             "   firstname TEXT NOT NULL, " +
                             "   surname TEXT NOT NULL, " +
                             "   phonenumber TEXT NOT NULL, " +
-                            "   weeklyworkinghours TEXT NOT NULL" +
+                            "   weeklyworkinghours TEXT NOT NULL, " +
+                            "   deleted INTEGER NOT NULL DEFAULT 0, " +
+                            "   deletion_scheduled_date TEXT, " +
+                            "   scheduled_deletion_date TEXT" +
+                            ");"
+            );
+            statement.execute(
+                    "CREATE TABLE IF NOT EXISTS app_user (" +
+                            "   uid INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                            "   username TEXT NOT NULL UNIQUE, " +
+                            "   password_hash TEXT NOT NULL, " +
+                            "   salt TEXT NOT NULL, " +
+                            "   role_id INTEGER NOT NULL, " +
+                            "   caregiver_cid INTEGER, " +
+                            "   is_active INTEGER NOT NULL DEFAULT 1" +
                             ");"
             );
         }
@@ -47,6 +62,8 @@ class CaregiverDaoTest {
     @BeforeEach
     void setUp() throws SQLException {
         dao = new CaregiverDao(connection);
+        AppSession.login(new User("admin", "hash", "salt",
+                new Role("Wohnbereichsleitung", true, true, true, true, true)));
         try (Statement statement = connection.createStatement()) {
             statement.execute("DELETE FROM caregiver");
         }
@@ -57,6 +74,7 @@ class CaregiverDaoTest {
      */
     @AfterAll
     static void tearDown() throws SQLException {
+        AppSession.logout();
         if (connection != null) {
             connection.close();
         }
@@ -104,5 +122,25 @@ class CaregiverDaoTest {
         // Assert: Kein Pfleger sollte mehr vorhanden sein
         List<Caregiver> afterDelete = dao.readAll();
         assertTrue(afterDelete.isEmpty(), "Nach dem Löschen sollte kein Pfleger mehr vorhanden sein");
+    }
+
+    @Test
+    @DisplayName("scheduleForDeletion(): Ein vorgemerkter Pfleger ist in readAll() nicht mehr sichtbar")
+    void scheduleForDeletionHidesFromActiveList() throws SQLException {
+        Caregiver caregiver = new Caregiver("Max", "Test", "123456", "40");
+        dao.create(caregiver);
+
+        List<Caregiver> allCaregivers = dao.readAll();
+        assertEquals(1, allCaregivers.size());
+        long cid = allCaregivers.get(0).getCid();
+
+        dao.scheduleForDeletion(cid);
+
+        List<Caregiver> activeCaregivers = dao.readAll();
+        List<Caregiver> includingDeleted = dao.readAllIncludingDeleted();
+
+        assertTrue(activeCaregivers.isEmpty(), "Vorgemerkte Pfleger dürfen nicht in der Standardliste erscheinen");
+        assertEquals(1, includingDeleted.size(), "In der erweiterten Liste muss der Datensatz weiterhin vorhanden sein");
+        assertTrue(includingDeleted.get(0).isDeleted(), "Der Datensatz muss als gelöscht markiert sein");
     }
 }

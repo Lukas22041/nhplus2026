@@ -149,10 +149,31 @@ public class SetUpDB {
                 "   password_hash TEXT NOT NULL, " +
                 "   salt TEXT NOT NULL, " +
                 "   role_id INTEGER NOT NULL, " +
+                "   caregiver_cid INTEGER, " +
+                "   is_active INTEGER NOT NULL DEFAULT 1, " +
                 "   FOREIGN KEY (role_id) REFERENCES role (rid) ON DELETE RESTRICT" +
                 ");";
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
+        } catch (SQLException exception) {
+            System.out.println(exception.getMessage());
+        }
+        migrateTableUser(connection);
+    }
+
+    private static void migrateTableUser(Connection connection) {
+        String[] migrations = {
+                "ALTER TABLE app_user ADD COLUMN caregiver_cid INTEGER",
+                "ALTER TABLE app_user ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"
+        };
+        try (Statement statement = connection.createStatement()) {
+            for (String sql : migrations) {
+                try {
+                    statement.execute(sql);
+                } catch (SQLException ignored) {
+                    // Spalte existiert bereits – ignorieren
+                }
+            }
         } catch (SQLException exception) {
             System.out.println(exception.getMessage());
         }
@@ -200,10 +221,38 @@ public class SetUpDB {
                 "   firstname TEXT NOT NULL, " +
                 "   surname TEXT NOT NULL, " +
                 "   phonenumber TEXT NOT NULL, " +
-                "   weeklyworkinghours TEXT NOT NULL" +
+                "   weeklyworkinghours TEXT NOT NULL, " +
+                "   deleted INTEGER NOT NULL DEFAULT 0, " +
+                "   deletion_scheduled_date TEXT, " +
+                "   scheduled_deletion_date TEXT" +
                 ");";
         try (Statement statement = connection.createStatement()) {
             statement.execute(SQL);
+        } catch (SQLException exception) {
+            System.out.println(exception.getMessage());
+        }
+        // Migration: Spalten ergänzen, falls die Tabelle bereits ohne sie existiert
+        migrateTableCaregiver(connection);
+    }
+
+    /**
+     * Fügt fehlende Soft-Delete-Spalten zur bestehenden caregiver-Tabelle hinzu.
+     * SQLite unterstützt kein „ADD COLUMN IF NOT EXISTS", daher werden Fehler ignoriert.
+     */
+    private static void migrateTableCaregiver(Connection connection) {
+        String[] migrations = {
+                "ALTER TABLE caregiver ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE caregiver ADD COLUMN deletion_scheduled_date TEXT",
+                "ALTER TABLE caregiver ADD COLUMN scheduled_deletion_date TEXT"
+        };
+        try (Statement statement = connection.createStatement()) {
+            for (String sql : migrations) {
+                try {
+                    statement.execute(sql);
+                } catch (SQLException ignored) {
+                    // Spalte existiert bereits – ignorieren
+                }
+            }
         } catch (SQLException exception) {
             System.out.println(exception.getMessage());
         }

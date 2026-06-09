@@ -31,5 +31,25 @@ public final class AppSession {
     public static boolean hasPermission(Permission permission) {
         return currentUser != null && currentUser.hasPermission(permission);
     }
+
+    public static boolean hasRole(String roleName) {
+        return currentUser != null
+                && currentUser.getRole() != null
+                && roleName != null
+                && roleName.equalsIgnoreCase(currentUser.getRole().getRoleName());
+    }
+
+    public static boolean hasAnyRole(String... roleNames) {
+        if (currentUser == null || currentUser.getRole() == null || roleNames == null) {
+            return false;
+        }
+        String currentRoleName = currentUser.getRole().getRoleName();
+        for (String roleName : roleNames) {
+            if (roleName != null && roleName.equalsIgnoreCase(currentRoleName)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 

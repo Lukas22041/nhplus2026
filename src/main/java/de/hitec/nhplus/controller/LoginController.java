@@ -54,7 +54,7 @@ public class LoginController {
 
         UserDao userDao = DaoFactory.getDaoFactory().createUserDao();
         try {
-            User user = userDao.readByUsername(username);
+            User user = userDao.readActiveByUsername(username);
             if (user == null || !PasswordUtil.verify(password, user.getSalt(), user.getPasswordHash())) {
                 this.passwordField.clear();
                 showError("Benutzername oder Passwort ist ungültig.");
