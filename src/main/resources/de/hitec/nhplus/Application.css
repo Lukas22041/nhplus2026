@@ -2,6 +2,54 @@
     -fx-font-family: "Arial";
 }
 
+.form-panel {
+    -fx-padding: 4 0 0 0;
+}
+
+.form-section {
+    -fx-background-color: #f5f8fc;
+    -fx-background-radius: 8;
+    -fx-border-color: #d8e0ec;
+    -fx-border-radius: 8;
+    -fx-padding: 10;
+}
+
+.form-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f3556;
+}
+
+.action-row {
+    -fx-padding: 2 0 0 0;
+}
+
+.button-primary {
+    -fx-background-color: #2d6cdf;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.button-primary:hover {
+    -fx-background-color: #245ac0;
+}
+
+.button-primary:pressed {
+    -fx-background-color: #1d4caa;
+}
+
+.button-danger {
+    -fx-background-color: #d64545;
+    -fx-text-fill: white;
+}
+
+.button-danger:hover {
+    -fx-background-color: #bd3636;
+}
+
+.button-danger:pressed {
+    -fx-background-color: #a92f2f;
+}
+
 .vBox{
     -fx-background-color: navy;
     -fx-border-color: rgb(142, 142, 142);
