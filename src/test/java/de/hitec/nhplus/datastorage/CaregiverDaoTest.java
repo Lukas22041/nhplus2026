@@ -143,4 +143,20 @@ class CaregiverDaoTest {
         assertEquals(1, includingDeleted.size(), "In der erweiterten Liste muss der Datensatz weiterhin vorhanden sein");
         assertTrue(includingDeleted.get(0).isDeleted(), "Der Datensatz muss als gelöscht markiert sein");
     }
+
+    @Test
+    @DisplayName("scheduleForDeletion(): Ein bereits vorgemerkter Pfleger kann nicht erneut vorgemerkt werden")
+    void scheduleForDeletionRejectsAlreadyScheduledCaregiver() throws SQLException {
+        Caregiver caregiver = new Caregiver("Max", "Test", "123456", "40");
+        dao.create(caregiver);
+
+        List<Caregiver> allCaregivers = dao.readAll();
+        assertEquals(1, allCaregivers.size());
+        long cid = allCaregivers.get(0).getCid();
+
+        dao.scheduleForDeletion(cid);
+
+        SQLException exception = Assertions.assertThrows(SQLException.class, () -> dao.scheduleForDeletion(cid));
+        assertTrue(exception.getMessage().contains("bereits zur Loeschung vorgemerkt"));
+    }
 }

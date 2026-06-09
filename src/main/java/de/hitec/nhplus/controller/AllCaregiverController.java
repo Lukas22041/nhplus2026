@@ -117,7 +117,9 @@ public class AllCaregiverController {
         this.tableView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Caregiver>() {
             @Override
             public void changed(ObservableValue<? extends Caregiver> observableValue, Caregiver oldCaregiver, Caregiver newCaregiver) {
-                AllCaregiverController.this.buttonDelete.setDisable(newCaregiver == null || !AppSession.hasPermission(Permission.DELETE));
+                AllCaregiverController.this.buttonDelete.setDisable(newCaregiver == null
+                        || !AppSession.hasPermission(Permission.DELETE)
+                        || newCaregiver.isDeleted());
             }
         });
 
@@ -242,6 +244,12 @@ public class AllCaregiverController {
         if (selectedItem == null) {
             return;
         }
+        if (selectedItem.isDeleted()) {
+            AlertUtil.showWarning("Löschvormerkung nicht möglich",
+                    "Datensatz bereits vorgemerkt",
+                    "Diese Pflegekraft ist bereits zur Löschung vorgemerkt und kann nicht erneut vorgemerkt werden.");
+            return;
+        }
 
         LocalDate deletionDueDate = LocalDate.now().plusYears(CaregiverDao.RETENTION_YEARS);
         String formattedDate = deletionDueDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
@@ -296,7 +304,9 @@ public class AllCaregiverController {
         boolean canCreate = AppSession.hasPermission(Permission.CREATE);
         boolean canEdit = AppSession.hasPermission(Permission.EDIT);
         boolean canDelete = AppSession.hasPermission(Permission.DELETE);
-        boolean canScheduleDeletion = canDelete && canManageDeletionQueue();
+        Caregiver selectedCaregiver = this.tableView.getSelectionModel().getSelectedItem();
+        boolean canScheduleDeletion = canDelete && canManageDeletionQueue()
+                && selectedCaregiver != null && !selectedCaregiver.isDeleted();
 
         this.tableView.setEditable(canEdit);
         this.buttonAdd.setDisable(!canCreate || !areInputDataValid());

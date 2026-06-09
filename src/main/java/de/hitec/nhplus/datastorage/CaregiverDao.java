@@ -168,12 +168,15 @@ public class CaregiverDao extends DaoImp<Caregiver> {
         final String SQL = "UPDATE caregiver SET deleted = 1, " +
                 "deletion_scheduled_date = ?, " +
                 "scheduled_deletion_date = ? " +
-                "WHERE cid = ?";
+                "WHERE cid = ? AND deleted = 0";
         try (PreparedStatement preparedStatement = this.connection.prepareStatement(SQL)) {
             preparedStatement.setString(1, convertLocalDateToString(today));
             preparedStatement.setString(2, convertLocalDateToString(deletionDue));
             preparedStatement.setLong(3, cid);
-            preparedStatement.executeUpdate();
+            int affectedRows = preparedStatement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Pflegekraft ist bereits zur Loeschung vorgemerkt oder nicht vorhanden.");
+            }
         }
         int disabledLogins = deactivateLinkedUserAccount(cid);
         LOGGER.info("Pflegekraft " + cid + " zur Loeschung vorgemerkt; deaktivierte Login-Konten: " + disabledLogins);
