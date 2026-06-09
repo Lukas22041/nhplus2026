@@ -3,6 +3,9 @@ package de.hitec.nhplus.controller;
 import de.hitec.nhplus.datastorage.DaoFactory;
 import de.hitec.nhplus.datastorage.PatientDao;
 import de.hitec.nhplus.datastorage.TreatmentDao;
+import de.hitec.nhplus.model.Permission;
+import de.hitec.nhplus.utils.AlertUtil;
+import de.hitec.nhplus.utils.AppSession;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
@@ -36,6 +39,9 @@ public class TreatmentController {
     @FXML
     private DatePicker datePicker;
 
+    @FXML
+    private Button btnChange;
+
     private AllTreatmentController controller;
     private Stage stage;
     private Patient patient;
@@ -49,6 +55,7 @@ public class TreatmentController {
             this.patient = pDao.read(treatment.getPid());
             this.treatment = treatment;
             showData();
+            applyPermissions();
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
@@ -67,6 +74,10 @@ public class TreatmentController {
 
     @FXML
     public void handleChange(){
+        if (!AppSession.hasPermission(Permission.EDIT)) {
+            AlertUtil.showPermissionDenied("Behandlungen bearbeiten");
+            return;
+        }
         this.treatment.setDate(this.datePicker.getValue().toString());
         this.treatment.setBegin(textFieldBegin.getText());
         this.treatment.setEnd(textFieldEnd.getText());
@@ -89,5 +100,15 @@ public class TreatmentController {
     @FXML
     public void handleCancel(){
         stage.close();
+    }
+
+    private void applyPermissions() {
+        boolean canEdit = AppSession.hasPermission(Permission.EDIT);
+        this.datePicker.setDisable(!canEdit);
+        this.textFieldBegin.setDisable(!canEdit);
+        this.textFieldEnd.setDisable(!canEdit);
+        this.textFieldDescription.setDisable(!canEdit);
+        this.textAreaRemarks.setDisable(!canEdit);
+        this.btnChange.setDisable(!canEdit);
     }
 }

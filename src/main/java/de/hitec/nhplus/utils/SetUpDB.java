@@ -1,13 +1,21 @@
 package de.hitec.nhplus.utils;
 
+import de.hitec.nhplus.datastorage.CaregiverDao;
 import de.hitec.nhplus.datastorage.ConnectionBuilder;
 import de.hitec.nhplus.datastorage.DaoFactory;
 import de.hitec.nhplus.datastorage.PatientDao;
+import de.hitec.nhplus.datastorage.RoleDao;
 import de.hitec.nhplus.datastorage.TreatmentDao;
+import de.hitec.nhplus.datastorage.UserDao;
+import de.hitec.nhplus.model.Caregiver;
 import de.hitec.nhplus.model.Patient;
+import de.hitec.nhplus.model.Role;
 import de.hitec.nhplus.model.Treatment;
+import de.hitec.nhplus.model.User;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -22,6 +30,11 @@ import static de.hitec.nhplus.utils.DateConverter.convertStringToLocalTime;
  */
 public class SetUpDB {
 
+    private static final String ROLE_MANAGER = "Wohnbereichsleitung";
+    private static final String ROLE_CAREGIVER = "Pflegekraft";
+    private static final String ROLE_READER = "Leserechte";
+    private static final String ROLE_BLOCKED = "Keine Rechte";
+
     /**
      * This method wipes the database by dropping the tables. Then the method calls DDL statements to build it up from
      * scratch and DML statements to fill the database with hard coded test data.
@@ -29,10 +42,36 @@ public class SetUpDB {
     public static void setUpDb() {
         Connection connection = ConnectionBuilder.getConnection();
         SetUpDB.wipeDb(connection);
+        initializeDb();
+    }
+
+    /**
+     * Stellt sicher, dass alle Tabellen vorhanden sind und legt Standarddaten nur an,
+     * wenn sie noch fehlen. Bereits vorhandene Daten bleiben erhalten.
+     */
+    public static void initializeDb() {
+        Connection connection = ConnectionBuilder.getConnection();
         SetUpDB.setUpTablePatient(connection);
         SetUpDB.setUpTableTreatment(connection);
-        SetUpDB.setUpPatients();
-        SetUpDB.setUpTreatments();
+        SetUpDB.setUpTableCaregiver(connection);
+        SetUpDB.setUpTableRole(connection);
+        SetUpDB.setUpTableUser(connection);
+
+        try {
+            if (isTableEmpty(connection, "patient")) {
+                SetUpDB.setUpPatients();
+            }
+            if (isTableEmpty(connection, "treatment")) {
+                SetUpDB.setUpTreatments();
+            }
+            if (isTableEmpty(connection, "caregiver")) {
+                SetUpDB.setUpCaregivers();
+            }
+            SetUpDB.ensureDefaultRoles();
+            SetUpDB.ensureDefaultUsers();
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
     }
 
     /**
@@ -41,7 +80,10 @@ public class SetUpDB {
     public static void wipeDb(Connection connection) {
         try (Statement statement = connection.createStatement()) {
             statement.execute("DROP TABLE IF EXISTS treatment");
+            statement.execute("DROP TABLE IF EXISTS app_user");
             statement.execute("DROP TABLE IF EXISTS patient");
+            statement.execute("DROP TABLE IF EXISTS caregiver");
+            statement.execute("DROP TABLE IF EXISTS role");
         } catch (SQLException exception) {
             System.out.println(exception.getMessage());
         }
@@ -83,6 +125,39 @@ public class SetUpDB {
         }
     }
 
+    private static void setUpTableRole(Connection connection) {
+        final String sql = "CREATE TABLE IF NOT EXISTS role (" +
+                "   rid INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "   role_name TEXT NOT NULL UNIQUE, " +
+                "   can_view INTEGER NOT NULL, " +
+                "   can_create INTEGER NOT NULL, " +
+                "   can_edit INTEGER NOT NULL, " +
+                "   can_delete INTEGER NOT NULL, " +
+                "   can_manage_users INTEGER NOT NULL" +
+                ");";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        } catch (SQLException exception) {
+            System.out.println(exception.getMessage());
+        }
+    }
+
+    private static void setUpTableUser(Connection connection) {
+        final String sql = "CREATE TABLE IF NOT EXISTS app_user (" +
+                "   uid INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "   username TEXT NOT NULL UNIQUE, " +
+                "   password_hash TEXT NOT NULL, " +
+                "   salt TEXT NOT NULL, " +
+                "   role_id INTEGER NOT NULL, " +
+                "   FOREIGN KEY (role_id) REFERENCES role (rid) ON DELETE RESTRICT" +
+                ");";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        } catch (SQLException exception) {
+            System.out.println(exception.getMessage());
+        }
+    }
+
 
     private static void setUpPatients() {
         try {
@@ -116,6 +191,74 @@ public class SetUpDB {
             dao.create(new Treatment(17, 6, convertStringToLocalDate("2023-09-01"), convertStringToLocalTime("16:00"), convertStringToLocalTime("17:00"), "KG", "Massage der Extremitäten zur Verbesserung der Durchblutung"));
         } catch (SQLException exception) {
             exception.printStackTrace();
+        }
+    }
+
+    private static void setUpTableCaregiver(Connection connection) {
+        final String SQL = "CREATE TABLE IF NOT EXISTS caregiver (" +
+                "   cid INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "   firstname TEXT NOT NULL, " +
+                "   surname TEXT NOT NULL, " +
+                "   phonenumber TEXT NOT NULL, " +
+                "   weeklyworkinghours TEXT NOT NULL" +
+                ");";
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(SQL);
+        } catch (SQLException exception) {
+            System.out.println(exception.getMessage());
+        }
+    }
+
+    private static void setUpCaregivers() {
+        try {
+            CaregiverDao dao = DaoFactory.getDaoFactory().createCaregiverDao();
+            dao.create(new Caregiver("Anna", "Schmidt", "0421-123456", "38"));
+            dao.create(new Caregiver("Klaus", "Müller", "0421-234567", "35"));
+            dao.create(new Caregiver("Maria", "Weber", "0421-345678", "40"));
+            dao.create(new Caregiver("Thomas", "Fischer", "0421-456789", "32"));
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+    }
+
+    private static void ensureDefaultRoles() throws SQLException {
+        RoleDao roleDao = DaoFactory.getDaoFactory().createRoleDao();
+        ensureRole(roleDao, new Role(ROLE_MANAGER, true, true, true, true, true));
+        ensureRole(roleDao, new Role(ROLE_CAREGIVER, true, true, true, false, false));
+        ensureRole(roleDao, new Role(ROLE_READER, true, false, false, false, false));
+        ensureRole(roleDao, new Role(ROLE_BLOCKED, false, false, false, false, false));
+    }
+
+    private static void ensureRole(RoleDao roleDao, Role role) throws SQLException {
+        if (roleDao.readByName(role.getRoleName()) == null) {
+            roleDao.create(role);
+        }
+    }
+
+    private static void ensureDefaultUsers() throws SQLException {
+        RoleDao roleDao = DaoFactory.getDaoFactory().createRoleDao();
+        UserDao userDao = DaoFactory.getDaoFactory().createUserDao();
+
+        ensureUser(userDao, "admin", "admin123", roleDao.readByName(ROLE_MANAGER));
+        ensureUser(userDao, "pflege", "pflege", roleDao.readByName(ROLE_CAREGIVER));
+        ensureUser(userDao, "guest", "qwerty", roleDao.readByName(ROLE_READER));
+        ensureUser(userDao, "blocked", "password", roleDao.readByName(ROLE_BLOCKED));
+    }
+
+    private static void ensureUser(UserDao userDao, String username, String password, Role role) throws SQLException {
+        if (role == null || userDao.readByUsername(username) != null) {
+            return;
+        }
+        String salt = PasswordUtil.generateSalt();
+        String hash = PasswordUtil.hash(password, salt);
+        userDao.create(new User(username, hash, salt, role));
+    }
+
+    private static boolean isTableEmpty(Connection connection, String tableName) throws SQLException {
+        final String sql = "SELECT COUNT(*) FROM " + tableName;
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
+            return resultSet.next() && resultSet.getInt(1) == 0;
         }
     }
 

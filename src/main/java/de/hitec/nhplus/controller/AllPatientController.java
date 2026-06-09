@@ -2,18 +2,22 @@ package de.hitec.nhplus.controller;
 
 import de.hitec.nhplus.datastorage.DaoFactory;
 import de.hitec.nhplus.datastorage.PatientDao;
+import de.hitec.nhplus.model.Permission;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import de.hitec.nhplus.model.Patient;
+import de.hitec.nhplus.utils.AlertUtil;
+import de.hitec.nhplus.utils.AppSession;
 import de.hitec.nhplus.utils.DateConverter;
 
 import java.sql.SQLException;
@@ -29,11 +33,16 @@ import de.hitec.nhplus.utils.PdfExporter;
  */
 public class AllPatientController {
 
+    private static final String ACTION_VIEW = "Patientendaten anzeigen";
+    private static final String ACTION_CREATE = "Patienten anlegen";
+    private static final String ACTION_EDIT = "Patientendaten bearbeiten";
+    private static final String ACTION_DELETE = "Patienten löschen";
+
     @FXML
     private TableView<Patient> tableView;
 
     @FXML
-    private TableColumn<Patient, Integer> columnId;
+    private TableColumn<Patient, Number> columnId;
 
     @FXML
     private TableColumn<Patient, String> columnFirstName;
@@ -86,9 +95,14 @@ public class AllPatientController {
      * configured.
      */
     public void initialize() {
-        this.readAllAndShowInTableView();
-
         this.columnId.setCellValueFactory(new PropertyValueFactory<>("pid"));
+        this.columnId.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(Number item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : String.valueOf(item));
+            }
+        });
 
         // CellValueFactory to show property values in TableView
         this.columnFirstName.setCellValueFactory(new PropertyValueFactory<>("firstName"));
@@ -112,24 +126,28 @@ public class AllPatientController {
 
         //Anzeigen der Daten
         this.tableView.setItems(this.patients);
+        this.tableView.setEditable(AppSession.hasPermission(Permission.EDIT));
 
         this.buttonDelete.setDisable(true);
         this.tableView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Patient>() {
             @Override
             public void changed(ObservableValue<? extends Patient> observableValue, Patient oldPatient, Patient newPatient) {;
-                AllPatientController.this.buttonDelete.setDisable(newPatient == null);
+                AllPatientController.this.buttonDelete.setDisable(newPatient == null || !AppSession.hasPermission(Permission.DELETE));
             }
         });
 
-        this.buttonAdd.setDisable(true);
+        this.buttonAdd.setDisable(!AppSession.hasPermission(Permission.CREATE));
         ChangeListener<String> inputNewPatientListener = (observableValue, oldText, newText) ->
-                AllPatientController.this.buttonAdd.setDisable(!AllPatientController.this.areInputDataValid());
+                AllPatientController.this.buttonAdd.setDisable(!AppSession.hasPermission(Permission.CREATE) || !AllPatientController.this.areInputDataValid());
         this.textFieldSurname.textProperty().addListener(inputNewPatientListener);
         this.textFieldFirstName.textProperty().addListener(inputNewPatientListener);
         this.textFieldDateOfBirth.textProperty().addListener(inputNewPatientListener);
         this.textFieldCareLevel.textProperty().addListener(inputNewPatientListener);
         this.textFieldRoomNumber.textProperty().addListener(inputNewPatientListener);
         this.textFieldAssets.textProperty().addListener(inputNewPatientListener);
+
+        this.readAllAndShowInTableView();
+        applyPermissionsToForm();
     }
 
     /**
@@ -139,6 +157,10 @@ public class AllPatientController {
      */
     @FXML
     public void handleOnEditFirstname(TableColumn.CellEditEvent<Patient, String> event) {
+        if (!ensurePermission(Permission.EDIT, ACTION_EDIT)) {
+            this.tableView.refresh();
+            return;
+        }
         event.getRowValue().setFirstName(event.getNewValue());
         this.doUpdate(event);
     }
@@ -150,6 +172,10 @@ public class AllPatientController {
      */
     @FXML
     public void handleOnEditSurname(TableColumn.CellEditEvent<Patient, String> event) {
+        if (!ensurePermission(Permission.EDIT, ACTION_EDIT)) {
+            this.tableView.refresh();
+            return;
+        }
         event.getRowValue().setSurname(event.getNewValue());
         this.doUpdate(event);
     }
@@ -161,6 +187,10 @@ public class AllPatientController {
      */
     @FXML
     public void handleOnEditDateOfBirth(TableColumn.CellEditEvent<Patient, String> event) {
+        if (!ensurePermission(Permission.EDIT, ACTION_EDIT)) {
+            this.tableView.refresh();
+            return;
+        }
         event.getRowValue().setDateOfBirth(event.getNewValue());
         this.doUpdate(event);
     }
@@ -172,6 +202,10 @@ public class AllPatientController {
      */
     @FXML
     public void handleOnEditCareLevel(TableColumn.CellEditEvent<Patient, String> event) {
+        if (!ensurePermission(Permission.EDIT, ACTION_EDIT)) {
+            this.tableView.refresh();
+            return;
+        }
         event.getRowValue().setCareLevel(event.getNewValue());
         this.doUpdate(event);
     }
@@ -183,6 +217,10 @@ public class AllPatientController {
      */
     @FXML
     public void handleOnEditRoomNumber(TableColumn.CellEditEvent<Patient, String> event){
+        if (!ensurePermission(Permission.EDIT, ACTION_EDIT)) {
+            this.tableView.refresh();
+            return;
+        }
         event.getRowValue().setRoomNumber(event.getNewValue());
         this.doUpdate(event);
     }
@@ -194,6 +232,10 @@ public class AllPatientController {
      */
     @FXML
     public void handleOnEditAssets(TableColumn.CellEditEvent<Patient, String> event){
+        if (!ensurePermission(Permission.EDIT, ACTION_EDIT)) {
+            this.tableView.refresh();
+            return;
+        }
         event.getRowValue().setAssets(event.getNewValue());
         this.doUpdate(event);
     }
@@ -218,6 +260,10 @@ public class AllPatientController {
     private void readAllAndShowInTableView() {
         this.patients.clear();
         this.dao = DaoFactory.getDaoFactory().createPatientDao();
+        if (!AppSession.hasPermission(Permission.VIEW)) {
+            this.tableView.setPlaceholder(new javafx.scene.control.Label("Keine Berechtigung zum Anzeigen von Patientendaten."));
+            return;
+        }
         try {
             this.patients.addAll(this.dao.readAll());
         } catch (SQLException exception) {
@@ -232,6 +278,9 @@ public class AllPatientController {
      */
     @FXML
     public void handleDelete() {
+        if (!ensurePermission(Permission.DELETE, ACTION_DELETE)) {
+            return;
+        }
         Patient selectedItem = this.tableView.getSelectionModel().getSelectedItem();
         if (selectedItem != null) {
             try {
@@ -250,6 +299,9 @@ public class AllPatientController {
      */
     @FXML
     public void handleAdd() {
+        if (!ensurePermission(Permission.CREATE, ACTION_CREATE)) {
+            return;
+        }
         String surname = this.textFieldSurname.getText();
         String firstName = this.textFieldFirstName.getText();
         String birthday = this.textFieldDateOfBirth.getText();
@@ -316,5 +368,32 @@ public class AllPatientController {
         return !this.textFieldFirstName.getText().isBlank() && !this.textFieldSurname.getText().isBlank() &&
                 !this.textFieldDateOfBirth.getText().isBlank() && !this.textFieldCareLevel.getText().isBlank() &&
                 !this.textFieldRoomNumber.getText().isBlank() && !this.textFieldAssets.getText().isBlank();
+    }
+
+    private void applyPermissionsToForm() {
+        boolean canView = AppSession.hasPermission(Permission.VIEW);
+        boolean canCreate = AppSession.hasPermission(Permission.CREATE);
+        boolean canEdit = AppSession.hasPermission(Permission.EDIT);
+        boolean canDelete = AppSession.hasPermission(Permission.DELETE);
+
+        this.tableView.setEditable(canEdit);
+        this.buttonDelete.setDisable(!canDelete || this.tableView.getSelectionModel().getSelectedItem() == null);
+        this.buttonAdd.setDisable(!canCreate || !areInputDataValid());
+
+        this.textFieldFirstName.setDisable(!canCreate);
+        this.textFieldSurname.setDisable(!canCreate);
+        this.textFieldDateOfBirth.setDisable(!canCreate);
+        this.textFieldCareLevel.setDisable(!canCreate);
+        this.textFieldRoomNumber.setDisable(!canCreate);
+        this.textFieldAssets.setDisable(!canCreate);
+        this.tableView.setDisable(!canView);
+    }
+
+    private boolean ensurePermission(Permission permission, String actionDescription) {
+        if (AppSession.hasPermission(permission)) {
+            return true;
+        }
+        AlertUtil.showPermissionDenied(actionDescription);
+        return false;
     }
 }
