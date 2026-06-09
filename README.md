@@ -34,9 +34,8 @@ Ihr arbeitet in **festen 3er-Gruppen über alle Arbeitsblätter**.
 ## Erste Schritte
 
 1. **Git-Repository anlegen:** Forkt oder klont dieses Repository in eurer Gruppe. Hinterlegt den Link zu eurem Repository in **Its-Learning**.
-2. **Projekt in IntelliJ öffnen** und die Anwendung über den Run-Button starten. Klickt euch durch und findet heraus, was die App kann.
-3. **Arbeitsblätter der Reihe nach bearbeiten** — beginnt mit [AB 01](doc/AB01-Analyse-der-Architektur.md).
-4. Bei technischen Fragen zu IntelliJ, SQLite, SceneBuilder oder module-info: siehe [Technische Referenz](doc/IB-Technische-Referenz.md).
+2. **Projekt in IntelliJ öffnen**.
+3. **Vor dem ersten Start einmal `SetUpDB` ausführen**, damit die Datenbank mit Tabellen und Testdaten angelegt wird.
 
 ## Ergebnisse dokumentieren
 
@@ -63,6 +62,23 @@ db/nursingHome.db              ← SQLite-Datenbank
 ## Datenbank zurücksetzen
 
 Falls eure Datenbank durch Tests inkonsistent geworden ist, könnt ihr sie über die Klasse `SetUpDB` (im Package `utils`) zurücksetzen. **Achtung:** Das löscht alle Tabellen und erstellt sie mit Testdaten neu. Eigene Tabellenänderungen gehen dabei verloren.
+
+## Demo-Logins
+
+Die Standardnutzer werden beim Start bzw. nach einem Reset der Datenbank automatisch angelegt:
+
+- `admin` / `admin123` — **Wohnbereichsleitung** (alle Rechte inkl. Benutzerverwaltung)
+- `pflege` / `pflege` — **Pflegekraft** (anzeigen, anlegen, bearbeiten)
+- `guest` / `qwerty` — **Leserechte** (nur anzeigen/exportieren)
+- `blocked` / `password` — **Keine Rechte**
+
+## Kurz zu den hinzugefügten Features
+
+- Login mit Benutzerkonto, Passwort-Hashing und aktiver Session
+- Rollen- und Rechteverwaltung inkl. Ansicht `Benutzerverwaltung`
+- Rechteabhängige Freigabe/Sperrung von Aktionen in den Modulen
+- PDF-Export für Patientendaten
+- Löschvormerkung für Pflegekräfte mit Aufbewahrungsfrist
 
 ## Wichtige Ressourcen
 
