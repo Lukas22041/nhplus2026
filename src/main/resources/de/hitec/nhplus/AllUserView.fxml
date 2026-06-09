@@ -27,7 +27,7 @@
             </Label>
          </children>
       </HBox>
-      <VBox spacing="15.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="80.0">
+      <VBox spacing="15.0" styleClass="form-panel" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="80.0">
          <children>
             <TableView fx:id="tableViewUsers" prefHeight="220.0">
                <columns>
@@ -39,7 +39,7 @@
                   <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
                </columnResizePolicy>
             </TableView>
-            <GridPane hgap="10.0" vgap="10.0">
+            <GridPane hgap="10.0" styleClass="form-section" vgap="10.0">
                <columnConstraints>
                   <ColumnConstraints minWidth="150.0" prefWidth="150.0" />
                   <ColumnConstraints hgrow="SOMETIMES" minWidth="220.0" prefWidth="220.0" />
@@ -54,11 +54,11 @@
                   <Label fx:id="labelSelectedUsername" text="Kein Nutzer ausgewählt" GridPane.columnIndex="1" />
                   <Label text="Neue Rolle:" GridPane.rowIndex="1" />
                   <ComboBox fx:id="comboBoxUserRole" prefWidth="220.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                  <Button fx:id="buttonSaveUserRole" mnemonicParsing="false" onAction="#handleSaveUserRole" text="Rolle speichern" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                  <Button fx:id="buttonSaveUserRole" mnemonicParsing="false" onAction="#handleSaveUserRole" styleClass="button-primary" text="Rolle speichern" GridPane.columnIndex="2" GridPane.rowIndex="1" />
                </children>
             </GridPane>
             <Separator />
-            <GridPane hgap="12.0" vgap="10.0">
+            <GridPane hgap="12.0" styleClass="form-section" vgap="10.0">
                <columnConstraints>
                   <ColumnConstraints minWidth="160.0" prefWidth="160.0" />
                   <ColumnConstraints minWidth="220.0" prefWidth="220.0" />
@@ -78,7 +78,7 @@
                   <CheckBox fx:id="checkBoxEdit" mnemonicParsing="false" text="Daten bearbeiten" GridPane.columnIndex="2" GridPane.rowIndex="1" />
                   <CheckBox fx:id="checkBoxDelete" mnemonicParsing="false" text="Daten löschen" GridPane.rowIndex="2" />
                   <CheckBox fx:id="checkBoxManageUsers" mnemonicParsing="false" text="Benutzer &amp; Rollen verwalten" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                  <Button fx:id="buttonSaveRole" mnemonicParsing="false" onAction="#handleSaveRole" text="Berechtigungen speichern" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                  <Button fx:id="buttonSaveRole" mnemonicParsing="false" onAction="#handleSaveRole" styleClass="button-primary" text="Berechtigungen speichern" GridPane.columnIndex="2" GridPane.rowIndex="2" />
                </children>
             </GridPane>
             <Label fx:id="labelStatus" text="" wrapText="true" />
