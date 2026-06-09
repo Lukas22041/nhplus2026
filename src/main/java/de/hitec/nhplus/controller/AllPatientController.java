@@ -18,6 +18,10 @@ import de.hitec.nhplus.utils.DateConverter;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import javafx.stage.FileChooser;
+import java.io.File;
+import java.io.IOException;
+import de.hitec.nhplus.utils.PdfExporter;
 
 
 /**
@@ -260,6 +264,32 @@ public class AllPatientController {
         }
         readAllAndShowInTableView();
         clearTextfields();
+    }
+
+    /**
+     * Exports the currently selected patient to a CSV file. This method is bound to the
+     * "Exportieren" button in the FXML. If no patient is selected, nothing happens.
+     */
+    @FXML
+    public void handleExport() {
+        Patient selected = this.tableView.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Patient exportieren");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf"));
+        File file = fileChooser.showSaveDialog(this.tableView.getScene().getWindow());
+        if (file == null) {
+            return;
+        }
+
+        try {
+            PdfExporter.exportPatientToPdf(selected, file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
