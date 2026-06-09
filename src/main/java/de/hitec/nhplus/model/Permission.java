@@ -5,6 +5,7 @@ package de.hitec.nhplus.model;
  */
 public enum Permission {
     VIEW("Daten anzeigen"),
+    EXPORT("Daten exportieren"),
     CREATE("Daten anlegen"),
     EDIT("Daten bearbeiten"),
     DELETE("Daten löschen"),
