@@ -91,6 +91,7 @@ public class PdfExporter {
     }
 
     private static final class PdfWriter {
+
         private final PDDocument document;
         private PDPage page;
         private PDPageContentStream stream;
@@ -159,31 +160,30 @@ public class PdfExporter {
                 stream.close();
             }
         }
-    }
 
-    private static List<String> wrap(String text, PDFont font, float size, float maxWidth) throws IOException {
-        if (text == null || text.isBlank()) {
-            return List.of("");
-        }
-
-        List<String> lines = new java.util.ArrayList<>();
-        String[] inputLines = text.replace("\r", "").split("\n", -1);
-        for (String inputLine : inputLines) {
-            StringBuilder current = new StringBuilder();
-            String[] words = inputLine.split("\\s+");
-            for (String word : words) {
-                String candidate = current.length() == 0 ? word : current + " " + word;
-                float candidateWidth = font.getStringWidth(candidate) / 1000f * size;
-                if (candidateWidth <= maxWidth || current.length() == 0) {
-                    current = new StringBuilder(candidate);
-                } else {
-                    lines.add(current.toString());
-                    current = new StringBuilder(word);
-                }
+        private static List<String> wrap(String text, PDFont font, float size, float maxWidth) throws IOException {
+            if (text == null || text.isBlank()) {
+                return List.of("");
             }
-            lines.add(current.toString());
+
+            List<String> lines = new java.util.ArrayList<>();
+            String[] inputLines = text.replace("\r", "").split("\n", -1);
+            for (String inputLine : inputLines) {
+                StringBuilder current = new StringBuilder();
+                String[] words = inputLine.split("\\s+");
+                for (String word : words) {
+                    String candidate = current.isEmpty() ? word : current + " " + word;
+                    float candidateWidth = font.getStringWidth(candidate) / 1000f * size;
+                    if (candidateWidth <= maxWidth || current.isEmpty()) {
+                        current = new StringBuilder(candidate);
+                    } else {
+                        lines.add(current.toString());
+                        current = new StringBuilder(word);
+                    }
+                }
+                lines.add(current.toString());
+            }
+            return lines;
         }
-        return lines;
     }
 }
-
