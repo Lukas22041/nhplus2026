@@ -2,7 +2,9 @@ package de.hitec.nhplus.controller;
 
 import de.hitec.nhplus.datastorage.DaoFactory;
 import de.hitec.nhplus.datastorage.PatientDao;
+import de.hitec.nhplus.datastorage.TreatmentDao;
 import de.hitec.nhplus.model.Permission;
+import de.hitec.nhplus.model.Treatment;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -22,6 +24,13 @@ import de.hitec.nhplus.utils.DateConverter;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import javafx.stage.FileChooser;
+import java.io.File;
+import java.io.IOException;
+import de.hitec.nhplus.utils.PdfExporter;
 
 
 /**
@@ -33,6 +42,8 @@ public class AllPatientController {
     private static final String ACTION_CREATE = "Patienten anlegen";
     private static final String ACTION_EDIT = "Patientendaten bearbeiten";
     private static final String ACTION_DELETE = "Patienten löschen";
+    private static final String ACTION_EXPORT = "Patientendaten exportieren";
+    private static final DateTimeFormatter EXPORT_FILENAME_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
 
     @FXML
     private TableView<Patient> tableView;
@@ -63,6 +74,9 @@ public class AllPatientController {
 
     @FXML
     private Button buttonAdd;
+
+    @FXML
+    private Button buttonExport;
 
     @FXML
     private TextField textFieldSurname;
@@ -129,6 +143,7 @@ public class AllPatientController {
             @Override
             public void changed(ObservableValue<? extends Patient> observableValue, Patient oldPatient, Patient newPatient) {;
                 AllPatientController.this.buttonDelete.setDisable(newPatient == null || !AppSession.hasPermission(Permission.DELETE));
+                AllPatientController.this.buttonExport.setDisable(newPatient == null || !AppSession.hasPermission(Permission.EXPORT));
             }
         });
 
@@ -315,6 +330,54 @@ public class AllPatientController {
     }
 
     /**
+     * Exports the currently selected patient to a PDF file. This method is bound to the
+     * "Exportieren" button in the FXML.
+     */
+    @FXML
+    public void handleExport() {
+        if (!ensurePermission(Permission.EXPORT, ACTION_EXPORT)) {
+            return;
+        }
+
+        Patient selected = this.tableView.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            AlertUtil.showWarning("Export nicht möglich", "Kein Patient ausgewählt", "Bitte wählen Sie zuerst einen Patienten aus.");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Patient exportieren");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf"));
+        fileChooser.setInitialFileName(buildDefaultExportFileName(selected));
+        File file = fileChooser.showSaveDialog(this.tableView.getScene().getWindow());
+        if (file == null) {
+            return;
+        }
+
+        List<Treatment> treatments;
+        try {
+            TreatmentDao treatmentDao = DaoFactory.getDaoFactory().createTreatmentDao();
+            treatments = treatmentDao.readTreatmentsByPid(selected.getPid());
+        } catch (SQLException sqlException) {
+            AlertUtil.showError("Export fehlgeschlagen", "Behandlungen konnten nicht geladen werden",
+                    "Der Export wurde abgebrochen, weil die Behandlungen nicht aus der Datenbank gelesen werden konnten.");
+            return;
+        }
+
+        try {
+            String exportedBy = AppSession.getCurrentUser() == null ? "Unbekannt" : AppSession.getCurrentUser().getUsername();
+            PdfExporter.exportPatientToPdf(selected, treatments, exportedBy, file);
+            AlertUtil.showInfo("Export erfolgreich", "PDF wurde erstellt", "Datei gespeichert unter:\n" + file.getAbsolutePath());
+        } catch (IOException e) {
+            if (file.exists() && !file.delete()) {
+                file.deleteOnExit();
+            }
+            AlertUtil.showError("Export fehlgeschlagen", "Datei konnte nicht erstellt werden",
+                    "Bitte prüfen Sie Schreibrechte und Zielpfad. Es wurde keine gueltige Datei erzeugt.");
+        }
+    }
+
+    /**
      * Clears all contents from all <code>TextField</code>s.
      */
     private void clearTextfields() {
@@ -345,10 +408,12 @@ public class AllPatientController {
         boolean canCreate = AppSession.hasPermission(Permission.CREATE);
         boolean canEdit = AppSession.hasPermission(Permission.EDIT);
         boolean canDelete = AppSession.hasPermission(Permission.DELETE);
+        boolean canExport = AppSession.hasPermission(Permission.EXPORT);
 
         this.tableView.setEditable(canEdit);
         this.buttonDelete.setDisable(!canDelete || this.tableView.getSelectionModel().getSelectedItem() == null);
         this.buttonAdd.setDisable(!canCreate || !areInputDataValid());
+        this.buttonExport.setDisable(!canExport || this.tableView.getSelectionModel().getSelectedItem() == null);
 
         this.textFieldFirstName.setDisable(!canCreate);
         this.textFieldSurname.setDisable(!canCreate);
@@ -365,5 +430,19 @@ public class AllPatientController {
         }
         AlertUtil.showPermissionDenied(actionDescription);
         return false;
+    }
+
+    private String buildDefaultExportFileName(Patient patient) {
+        String timestamp = LocalDateTime.now().format(EXPORT_FILENAME_TIMESTAMP);
+        String surname = sanitizeFilePart(patient.getSurname());
+        String firstName = sanitizeFilePart(patient.getFirstName());
+        return "patient_" + patient.getPid() + "_" + surname + "_" + firstName + "_" + timestamp + ".pdf";
+    }
+
+    private String sanitizeFilePart(String value) {
+        if (value == null || value.isBlank()) {
+            return "na";
+        }
+        return value.replaceAll("[^a-zA-Z0-9_-]", "_");
     }
 }
