@@ -7,15 +7,13 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
 <AnchorPane prefHeight="500.0" prefWidth="855.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.hitec.nhplus.controller.AllTreatmentController" stylesheets="@Application.css">
    <children>
-      <TableView fx:id="tableView" editable="true" layoutX="31.0" layoutY="35.0" onMouseClicked="#handleMouseClick" prefHeight="364.0" prefWidth="825.0" AnchorPane.bottomAnchor="75.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="80.0">
+      <TableView fx:id="tableView" editable="true" layoutX="31.0" layoutY="35.0" onMouseClicked="#handleMouseClick" prefHeight="364.0" prefWidth="825.0" AnchorPane.bottomAnchor="105.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="80.0">
         <columns>
             <TableColumn fx:id="columnId" maxWidth="-1.0" minWidth="40.0" prefWidth="50.0" text="ID" />
             <TableColumn fx:id="columnPid" maxWidth="-1.0" minWidth="100.0" prefWidth="120.0" text="PatientID" />
@@ -28,32 +26,22 @@
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
          </columnResizePolicy>
       </TableView>
-      <HBox layoutX="623.0" layoutY="419.3999938964844" spacing="10.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0">
+      <VBox spacing="10.0" styleClass="form-panel" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0">
          <children>
-            <GridPane hgap="10.0" vgap="10.0">
-              <columnConstraints>
-                <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" prefWidth="200.0" />
-                <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" minWidth="200.0" prefWidth="200.0" />
-                  <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" minWidth="10.0" prefWidth="160.0" />
-              </columnConstraints>
-              <rowConstraints>
-                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-              </rowConstraints>
+            <VBox spacing="8.0" styleClass="form-section">
                <children>
-                  <Button fx:id="buttonNewTreament" mnemonicParsing="false" onAction="#handleNewTreatment" prefWidth="200.0" text="neue Behandlung anlegen" GridPane.columnIndex="1" />
-                  <ComboBox fx:id="comboBoxPatientSelection" minWidth="160.0" onAction="#handleComboBox" prefWidth="200.0" />
-                  <Button fx:id="buttonDelete" mnemonicParsing="false" onAction="#handleDelete" prefWidth="200.0" text="Löschen" GridPane.columnIndex="2" />
+                  <Label text="Behandlungsaktionen" styleClass="form-title" />
+                  <HBox spacing="10.0">
+                     <children>
+                        <ComboBox fx:id="comboBoxPatientSelection" minWidth="200.0" onAction="#handleComboBox" prefWidth="240.0" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="buttonNewTreament" mnemonicParsing="false" onAction="#handleNewTreatment" prefWidth="210.0" styleClass="button-primary" text="Neue Behandlung anlegen" />
+                        <Button fx:id="buttonDelete" mnemonicParsing="false" onAction="#handleDelete" prefWidth="120.0" styleClass="button-danger" text="Löschen" />
+                     </children>
+                  </HBox>
                </children>
-               <padding>
-                  <Insets right="10.0" />
-               </padding>
-               <HBox.margin>
-                  <Insets />
-               </HBox.margin>
-            </GridPane>
-            <HBox prefWidth="190.0" spacing="10.0" />
+            </VBox>
          </children>
-      </HBox>
+      </VBox>
       <HBox alignment="TOP_CENTER" layoutX="10.0" layoutY="10.0" prefWidth="200.0" spacing="25.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
          <children>
             <Label alignment="CENTER" contentDisplay="CENTER" minWidth="400.0" text="Behandlungen" textAlignment="CENTER">
