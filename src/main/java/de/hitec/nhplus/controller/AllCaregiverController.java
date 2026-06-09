@@ -11,8 +11,13 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -20,13 +25,16 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 public class AllCaregiverController {
 
     private static final String ACTION_VIEW = "Pflegekraftdaten anzeigen";
     private static final String ACTION_CREATE = "Pflegekräfte anlegen";
     private static final String ACTION_EDIT = "Pflegekraftdaten bearbeiten";
-    private static final String ACTION_DELETE = "Pflegekräfte löschen";
+    private static final String ACTION_DELETE = "Pflegekräfte zur Löschung vormerken";
 
     @FXML
     private TableView<Caregiver> tableView;
@@ -64,6 +72,9 @@ public class AllCaregiverController {
     @FXML
     private TextField textFieldWeeklyWorkingHours;
 
+    @FXML
+    private CheckBox checkBoxShowScheduledDeletions;
+
     private final ObservableList<Caregiver> caregivers = FXCollections.observableArrayList();
     private CaregiverDao dao;
 
@@ -84,6 +95,23 @@ public class AllCaregiverController {
 
         this.tableView.setItems(this.caregivers);
         this.tableView.setEditable(AppSession.hasPermission(Permission.EDIT));
+        this.tableView.setRowFactory(table -> new TableRow<>() {
+            @Override
+            protected void updateItem(Caregiver caregiver, boolean empty) {
+                super.updateItem(caregiver, empty);
+                if (empty || caregiver == null) {
+                    getStyleClass().remove("caregiver-scheduled-delete-row");
+                    return;
+                }
+                if (caregiver.isDeleted()) {
+                    if (!getStyleClass().contains("caregiver-scheduled-delete-row")) {
+                        getStyleClass().add("caregiver-scheduled-delete-row");
+                    }
+                } else {
+                    getStyleClass().remove("caregiver-scheduled-delete-row");
+                }
+            }
+        });
 
         this.buttonDelete.setDisable(true);
         this.tableView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Caregiver>() {
@@ -100,6 +128,11 @@ public class AllCaregiverController {
         this.textFieldFirstName.textProperty().addListener(inputListener);
         this.textFieldPhoneNumber.textProperty().addListener(inputListener);
         this.textFieldWeeklyWorkingHours.textProperty().addListener(inputListener);
+
+        this.checkBoxShowScheduledDeletions.setVisible(canManageDeletionQueue());
+        this.checkBoxShowScheduledDeletions.setManaged(canManageDeletionQueue());
+        this.checkBoxShowScheduledDeletions.setSelected(true);
+        this.checkBoxShowScheduledDeletions.selectedProperty().addListener((observable, oldValue, newValue) -> readAllAndShowInTableView());
 
         this.readAllAndShowInTableView();
         applyPermissionsToForm();
@@ -161,7 +194,19 @@ public class AllCaregiverController {
             return;
         }
         try {
-            this.caregivers.addAll(this.dao.readAll());
+            if (this.checkBoxShowScheduledDeletions != null
+                    && this.checkBoxShowScheduledDeletions.isVisible()
+                    && this.checkBoxShowScheduledDeletions.isSelected()) {
+                this.caregivers.addAll(this.dao.readAllIncludingDeleted());
+            } else {
+                this.caregivers.addAll(this.dao.readAll());
+            }
+        } catch (SecurityException securityException) {
+            AlertUtil.showPermissionDenied(ACTION_VIEW + " (inkl. vorgemerkter Datensätze)");
+            if (this.checkBoxShowScheduledDeletions != null) {
+                this.checkBoxShowScheduledDeletions.setSelected(false);
+            }
+            this.caregivers.clear();
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
@@ -187,16 +232,47 @@ public class AllCaregiverController {
 
     @FXML
     public void handleDelete() {
-        if (!ensurePermission(Permission.DELETE, ACTION_DELETE)) {
+        if (!ensurePermission(Permission.DELETE, ACTION_DELETE) || !canManageDeletionQueue()) {
+            if (!canManageDeletionQueue()) {
+                AlertUtil.showPermissionDenied(ACTION_DELETE);
+            }
             return;
         }
         Caregiver selectedItem = this.tableView.getSelectionModel().getSelectedItem();
-        if (selectedItem != null) {
+        if (selectedItem == null) {
+            return;
+        }
+
+        LocalDate deletionDueDate = LocalDate.now().plusYears(CaregiverDao.RETENTION_YEARS);
+        String formattedDate = deletionDueDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Zur Löschung vormerken");
+        confirm.setHeaderText("Pflegekraft zur Löschung vormerken");
+        confirm.setContentText(
+                "Pflegekraft: " + selectedItem.getFirstName() + " " + selectedItem.getSurname() + "\n\n" +
+                "Der Datensatz wird als \"zur Löschung vorgemerkt\" markiert und ist\n" +
+                "für normale Nutzer nicht mehr sichtbar.\n\n" +
+                "Aufbewahrungsfrist: " + CaregiverDao.RETENTION_YEARS + " Jahre (gem. §147 AO / §257 HGB)\n" +
+                "Geplantes Löschdatum: " + formattedDate + "\n\n" +
+                "Möchten Sie fortfahren?"
+        );
+
+        ButtonType confirmButton = new ButtonType("Vormerken", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButton = new ButtonType("Abbrechen", ButtonBar.ButtonData.CANCEL_CLOSE);
+        confirm.getButtonTypes().setAll(confirmButton, cancelButton);
+
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == confirmButton) {
             try {
-                this.dao.deleteById(selectedItem.getCid());
+                this.dao.scheduleForDeletion(selectedItem.getCid());
                 this.tableView.getItems().remove(selectedItem);
+            } catch (SecurityException securityException) {
+                AlertUtil.showPermissionDenied(ACTION_DELETE);
             } catch (SQLException exception) {
                 exception.printStackTrace();
+                AlertUtil.showError("Fehler", "Löschvormerkung fehlgeschlagen",
+                        "Der Datensatz konnte nicht vorgemerkt werden: " + exception.getMessage());
             }
         }
     }
@@ -220,10 +296,11 @@ public class AllCaregiverController {
         boolean canCreate = AppSession.hasPermission(Permission.CREATE);
         boolean canEdit = AppSession.hasPermission(Permission.EDIT);
         boolean canDelete = AppSession.hasPermission(Permission.DELETE);
+        boolean canScheduleDeletion = canDelete && canManageDeletionQueue();
 
         this.tableView.setEditable(canEdit);
         this.buttonAdd.setDisable(!canCreate || !areInputDataValid());
-        this.buttonDelete.setDisable(!canDelete || this.tableView.getSelectionModel().getSelectedItem() == null);
+        this.buttonDelete.setDisable(!canScheduleDeletion || this.tableView.getSelectionModel().getSelectedItem() == null);
 
         this.textFieldFirstName.setDisable(!canCreate);
         this.textFieldSurname.setDisable(!canCreate);
@@ -238,5 +315,9 @@ public class AllCaregiverController {
         }
         AlertUtil.showPermissionDenied(actionDescription);
         return false;
+    }
+
+    private boolean canManageDeletionQueue() {
+        return AppSession.hasAnyRole("Wohnbereichsleiter", "Wohnbereichsleitung", "Compliance");
     }
 }

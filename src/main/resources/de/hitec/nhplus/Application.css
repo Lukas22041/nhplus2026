@@ -7,3 +7,12 @@
     -fx-border-color: rgb(142, 142, 142);
 }
 
+.table-row-cell.caregiver-scheduled-delete-row {
+    -fx-background-color: #ffe6cc;
+}
+
+.table-row-cell:filled:selected.caregiver-scheduled-delete-row,
+.table-row-cell:focused:selected.caregiver-scheduled-delete-row {
+    -fx-background-color: #ffd1a3;
+}
+
