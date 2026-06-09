@@ -117,6 +117,7 @@ public class Role {
     public boolean hasPermission(Permission permission) {
         return switch (permission) {
             case VIEW -> isViewAllowed();
+            case EXPORT -> isViewAllowed();
             case CREATE -> isCreateAllowed();
             case EDIT -> isEditAllowed();
             case DELETE -> isDeleteAllowed();
