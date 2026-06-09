@@ -12,6 +12,7 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
 
@@ -54,12 +55,12 @@
                   <Insets />
                </HBox.margin>
             </GridPane>
-            <HBox alignment="TOP_CENTER" prefWidth="190.0" spacing="10.0">
+            <VBox alignment="TOP_CENTER" prefWidth="170.0" spacing="10.0">
                <children>
-                  <Button fx:id="buttonAdd" mnemonicParsing="false" onAction="#handleAdd" prefWidth="90.0" text="Hinzufügen" />
-                  <Button fx:id="buttonDelete" mnemonicParsing="false" onAction="#handleDelete" prefWidth="90.0" text="Löschen" />
+                  <Button fx:id="buttonAdd" mnemonicParsing="false" onAction="#handleAdd" prefWidth="170.0" text="Hinzufügen" />
+                  <Button fx:id="buttonDelete" mnemonicParsing="false" onAction="#handleDelete" prefWidth="170.0" text="Löschen" />
                </children>
-            </HBox>
+            </VBox>
          </children>
       </HBox>
       <HBox alignment="TOP_CENTER" layoutX="10.0" layoutY="10.0" prefWidth="200.0" spacing="25.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="5.0">
