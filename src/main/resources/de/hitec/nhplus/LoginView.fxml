@@ -29,7 +29,7 @@
   Hinweis: Das PasswordField unterscheidet sich vom TextField darin,
   dass die Eingabe als Punkte angezeigt wird (Standard-Verhalten).
 -->
-<VBox alignment="CENTER" prefHeight="300.0" prefWidth="420.0" spacing="15.0" stylesheets="@Application.css" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1">
+<VBox alignment="CENTER" prefHeight="300.0" prefWidth="420.0" spacing="15.0" stylesheets="@Application.css" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="de.hitec.nhplus.controller.LoginController">
    <padding>
       <Insets bottom="40.0" left="60.0" right="60.0" top="40.0" />
    </padding>
@@ -41,7 +41,7 @@
       </Label>
       <TextField fx:id="textFieldUsername" promptText="Benutzername" />
       <PasswordField fx:id="passwordField" promptText="Passwort" />
-      <Button fx:id="buttonLogin" defaultButton="true" maxWidth="Infinity" mnemonicParsing="false" text="Anmelden" />
+      <Button fx:id="buttonLogin" defaultButton="true" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleLogin" text="Anmelden" />
       <Label fx:id="labelError" text="" textFill="#c0392b" visible="false" wrapText="true" />
    </children>
 </VBox>

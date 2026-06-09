@@ -2,6 +2,9 @@ package de.hitec.nhplus.controller;
 
 import de.hitec.nhplus.datastorage.DaoFactory;
 import de.hitec.nhplus.datastorage.TreatmentDao;
+import de.hitec.nhplus.model.Permission;
+import de.hitec.nhplus.utils.AlertUtil;
+import de.hitec.nhplus.utils.AppSession;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -50,9 +53,9 @@ public class NewTreatmentController {
         this.patient = patient;
         this.stage = stage;
 
-        this.buttonAdd.setDisable(true);
+        this.buttonAdd.setDisable(!AppSession.hasPermission(Permission.CREATE));
         ChangeListener<String> inputNewPatientListener = (observableValue, oldText, newText) ->
-                NewTreatmentController.this.buttonAdd.setDisable(NewTreatmentController.this.areInputDataInvalid());
+                NewTreatmentController.this.buttonAdd.setDisable(!AppSession.hasPermission(Permission.CREATE) || NewTreatmentController.this.areInputDataInvalid());
         this.textFieldBegin.textProperty().addListener(inputNewPatientListener);
         this.textFieldEnd.textProperty().addListener(inputNewPatientListener);
         this.textFieldDescription.textProperty().addListener(inputNewPatientListener);
@@ -70,6 +73,7 @@ public class NewTreatmentController {
             }
         });
         this.showPatientData();
+        applyPermissions();
     }
 
     private void showPatientData(){
@@ -79,6 +83,10 @@ public class NewTreatmentController {
 
     @FXML
     public void handleAdd(){
+        if (!AppSession.hasPermission(Permission.CREATE)) {
+            AlertUtil.showPermissionDenied("Behandlungen anlegen");
+            return;
+        }
         LocalDate date = this.datePicker.getValue();
         LocalTime begin = DateConverter.convertStringToLocalTime(textFieldBegin.getText());
         LocalTime end = DateConverter.convertStringToLocalTime(textFieldEnd.getText());
@@ -118,5 +126,15 @@ public class NewTreatmentController {
             return true;
         }
         return this.textFieldDescription.getText().isBlank() || this.datePicker.getValue() == null;
+    }
+
+    private void applyPermissions() {
+        boolean canCreate = AppSession.hasPermission(Permission.CREATE);
+        this.textFieldBegin.setDisable(!canCreate);
+        this.textFieldEnd.setDisable(!canCreate);
+        this.textFieldDescription.setDisable(!canCreate);
+        this.textAreaRemarks.setDisable(!canCreate);
+        this.datePicker.setDisable(!canCreate);
+        this.buttonAdd.setDisable(!canCreate || areInputDataInvalid());
     }
 }

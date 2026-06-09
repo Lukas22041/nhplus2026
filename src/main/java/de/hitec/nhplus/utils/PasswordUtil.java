@@ -92,7 +92,12 @@ public final class PasswordUtil {
      * @return {@code true}, wenn Passwort + Salt den erwarteten Hash ergeben
      */
     public static boolean verify(String password, String salt, String expectedHash) {
-        return hash(password, salt).equalsIgnoreCase(expectedHash);
+        if (password == null || salt == null || expectedHash == null) {
+            return false;
+        }
+        byte[] actualBytes = hash(password, salt).getBytes(StandardCharsets.UTF_8);
+        byte[] expectedBytes = expectedHash.toLowerCase().getBytes(StandardCharsets.UTF_8);
+        return MessageDigest.isEqual(actualBytes, expectedBytes);
     }
 
     private static String toHex(byte[] bytes) {
